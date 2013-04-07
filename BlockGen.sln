@@ -1,0 +1,29 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "BlockGen", "BlockGen.vcxproj", "{137A9108-BE09-4356-BD3E-D9A97DAAA502}"
+EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "TestApp", "TestApp\TestApp.vcxproj", "{87A0F4B0-08A6-4BD0-BE73-69F598C06188}"
+	ProjectSection(ProjectDependencies) = postProject
+		{137A9108-BE09-4356-BD3E-D9A97DAAA502} = {137A9108-BE09-4356-BD3E-D9A97DAAA502}
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Win32 = Debug|Win32
+		Release|Win32 = Release|Win32
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{137A9108-BE09-4356-BD3E-D9A97DAAA502}.Debug|Win32.ActiveCfg = Debug|Win32
+		{137A9108-BE09-4356-BD3E-D9A97DAAA502}.Debug|Win32.Build.0 = Debug|Win32
+		{137A9108-BE09-4356-BD3E-D9A97DAAA502}.Release|Win32.ActiveCfg = Release|Win32
+		{137A9108-BE09-4356-BD3E-D9A97DAAA502}.Release|Win32.Build.0 = Release|Win32
+		{87A0F4B0-08A6-4BD0-BE73-69F598C06188}.Debug|Win32.ActiveCfg = Debug|Win32
+		{87A0F4B0-08A6-4BD0-BE73-69F598C06188}.Debug|Win32.Build.0 = Debug|Win32
+		{87A0F4B0-08A6-4BD0-BE73-69F598C06188}.Release|Win32.ActiveCfg = Release|Win32
+		{87A0F4B0-08A6-4BD0-BE73-69F598C06188}.Release|Win32.Build.0 = Release|Win32
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,10 @@
+Debug/
+Release/
+/doc
+/libraries
+/bin
+
+*.sdf
+*.opensdf
+*.suo
+*.zip
