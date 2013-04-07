@@ -16,7 +16,7 @@ OrE::Algorithm::PerlinNoise PerlinObject2D(0, 10000000.0f);
 OrE::Algorithm::PerlinNoise PerlinObject3D(1, 10000000.0f);
 
 // **************************************************************************** //
-int GenerateBlock(int x, int y, int z)
+int GenerateBlock(int x, int y, int z) // generates the structures, no dynamic objects
 {
 	float fx = x * SURFACE_FREQ;
 	float fy = y * SURFACE_FREQ;
@@ -59,7 +59,7 @@ int GenerateBlock(int x, int y, int z)
 	// Cut through the volume with an 2D Perlin noise
 	fSurfaceClip = PerlinObject2D.Rand2D(0,7,0.6f,SURFACE_FREQ * x, SURFACE_FREQ * y);
 
-	// Volumetric sample
+	// Volumetric sample (caves)
 	float fVol = PerlinObject3D.Rand3D(0,4,0.4f,VOLUME_FREQ * x, VOLUME_FREQ * y, 3.0f*VOLUME_FREQ * z);
 	float fVolThreshold = (z + SURFACE_VERTICAL_BLOCK_OFFSET)/(SURFACE_VERTICAL_BLOCK_NUMBER*3.0f);
 	fVolThreshold *= fVolThreshold;
@@ -86,6 +86,28 @@ int GenerateBlock(int x, int y, int z)
 	}
 
 	return ((f1*fDesert + f2*fStandard + f3*fBubble) > 0.0f)?iPriorBlockType:0;
+}
+
+/* GenerateDynamics() *************************************
+ * generates water and vegetation
+ * call this after the surface exists
+ * grass 501
+ * tree [511; 520]
+ */
+int GenerateDynamics(int x, int y, int z)
+{
+	static float TreeRate = 0.9f; 
+	if(Map.Get(x,y,z - 1) == 3) //dirt as ground
+	{
+		if(OrE::Algorithm::Rand() < TreeRate)
+		{
+			TreeRate = 0.f;
+			return -(int(OrE::Algorithm::Rand() * 9 + 1)) - 10;
+		}
+	TreeRate += 0.1f;
+	return -1;//-1
+	}
+	return 0;
 }
 
 // **************************************************************************** //
@@ -138,7 +160,7 @@ __declspec(dllexport) int GetBlock(float _fX, float _fY, float _fZ)
 // **************************************************************************** //
 __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ)
 {
-	// Cheack if block defined
+	// Check if block defined
 	int x = (int)_fX;
 	int y = (int)_fY;
 	int z = (int)_fZ;
@@ -150,15 +172,26 @@ __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ)
 		|| y == Map.iMinY || y == Map.iMaxY-1
 		|| z == Map.iMinZ || z == Map.iMaxZ-1)
 		return true;*/
-	if((y!=Map.iMaxY-1) && !Map.Get(x,y+1,z)) return true;
-	if((y!=Map.iMinY) && !Map.Get(x,y-1,z)) return true;
-	if((z!=Map.iMaxZ-1) && !Map.Get(x,y,z+1)) return true;
-	if((z!=Map.iMinZ) && !Map.Get(x,y,z-1)) return true;
-	if((x!=Map.iMaxX-1) && !Map.Get(x+1,y,z)) return true;
-	if((x!=Map.iMinX) && !Map.Get(x-1,y,z)) return true;
+	if(IsSolid(x,y+1,z)) return true;
+	if(IsSolid(x,y-1,z)) return true;
+	if(IsSolid(x,y,z+1)) return true;
+	if(IsSolid(x,y,z-1)) return true;
+	if(IsSolid(x+1,y,z)) return true;
+	if(IsSolid(x-1,y,z)) return true;
 	return false;
 }
 
+// **************************************************************************** //
+__declspec(dllexport) bool IsSolid(float _fX, float _fY, float _fZ)
+{
+	int x = (int)_fX;
+	int y = (int)_fY;
+	int z = (int)_fZ;
+
+	uint16 Type = Map.Get(x,y,z);
+	if(Type > 0 && Type <= 500) return true;
+	return false;
+}
 // **************************************************************************** //
 // Removes a created block by setting its value to 0
 __declspec(dllexport) void DestroyBlock(float _fX, float _fY, float _fZ)
@@ -234,10 +267,16 @@ __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 // Fills the given area with perlin noise. Not doing any test for boundaries!
 void Fill(int x1, int x2, int y1, int y2, int z1, int z2)
 {
+	static bool bPreviousZ = false;
 	for(int x=x1;x<x2;++x)
 		for(int y=y1;y<y2;++y)
 			for(int z=z1;z<z2;++z)
+			{
 				Map.Set(x,y,z, GenerateBlock(x,y,z));
+				if(bPreviousZ && !Map.Get(x,y,z))
+					Map.Set(x,y,z, GenerateDynamics(x,y,z));
+				bPreviousZ = Map.Get(x,y,z) > 1;
+			}
 }
 
 // **************************************************************************** //

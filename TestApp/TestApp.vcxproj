@@ -39,10 +39,10 @@
   </ImportGroup>
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
-    <LibraryPath>D:\C++\Tools\BlockGen\Debug;$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\Debug;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LibraryPath>D:\C++\Tools\BlockGen\Release;$(LibraryPath)</LibraryPath>
+    <LibraryPath>..\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -75,6 +75,11 @@
   <ItemGroup>
     <ClCompile Include="stdafx.cpp" />
     <ClCompile Include="TestApp.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\BlockGen.vcxproj">
+      <Project>{137a9108-be09-4356-bd3e-d9a97daaa502}</Project>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
