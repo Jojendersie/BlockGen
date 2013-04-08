@@ -42,7 +42,7 @@ static const char* FILE_SIGNATURE	= "blo1";
 // All methods
 extern "C" __declspec(dllexport) int GetBlock(float _fX, float _fY, float _fZ);
 extern "C" __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ);
-extern "C" __declspec(dllexport) bool IsSolid(float _fX, float _fY, float _fZ);
+extern "C" __declspec(dllexport) bool IsSolid(int x, int y, int z);
 extern "C" __declspec(dllexport) void DestroyBlock(float _fX, float _fY, float _fZ);				// Removes an created block due to set 0
 extern "C" __declspec(dllexport) void SetBlock(float _fX, float _fY, float _fZ, int _iType);		// set to a hopefully specified block (each integer possible)
 // Load a map a generate a new one if file does not exists

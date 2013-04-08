@@ -121,7 +121,7 @@ void Extend(int _bx, int _by, int _bz)
 	int iNewMaxY = (_by>0?20:0)+Map.iMaxY;		int iSY = iNewMaxY-iNewMinY;
 	int iNewMinZ = (_bz<0?-20:0)+Map.iMinZ;
 	int iNewMaxZ = (_bz>0?20:0)+Map.iMaxZ;		int iSZ = iNewMaxZ-iNewMinZ;
-	unsigned char* pNewBlockArray = (unsigned char*)malloc(iSX*iSY*iSZ);
+	unsigned short* pNewBlockArray = (unsigned short*)malloc(iSX*iSY*iSZ);
 	for(int x=iNewMinX; x<iNewMaxX; ++x)
 		for(int y=iNewMinY; y<iNewMaxY; ++y)
 			for(int z=iNewMinZ; z<iNewMaxZ; ++z)
@@ -158,6 +158,15 @@ __declspec(dllexport) int GetBlock(float _fX, float _fY, float _fZ)
 }
 
 // **************************************************************************** //
+// @return whether the block is a standard cube
+__declspec(dllexport) bool IsSolid(int x, int y, int z)
+{
+	uint16 Type = Map.Get(x,y,z);
+	if(Type > 0 && Type <= 500) return true;
+	return false;
+}
+
+// **************************************************************************** //
 __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ)
 {
 	// Check if block defined
@@ -181,17 +190,6 @@ __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ)
 	return false;
 }
 
-// **************************************************************************** //
-__declspec(dllexport) bool IsSolid(float _fX, float _fY, float _fZ)
-{
-	int x = (int)_fX;
-	int y = (int)_fY;
-	int z = (int)_fZ;
-
-	uint16 Type = Map.Get(x,y,z);
-	if(Type > 0 && Type <= 500) return true;
-	return false;
-}
 // **************************************************************************** //
 // Removes a created block by setting its value to 0
 __declspec(dllexport) void DestroyBlock(float _fX, float _fY, float _fZ)
@@ -226,7 +224,7 @@ __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 		Map.iMinX = -20;	Map.iMaxX = 20;
 		Map.iMinY = -20;	Map.iMaxY = 20;
 		Map.iMinZ = -20;	Map.iMaxZ = 20;
-		Map.pBlockArray = (unsigned char*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ());
+		Map.pBlockArray = (unsigned short*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ());
 
 		// Seed random to file name
 		uint32 dwSeed = 0;
@@ -255,7 +253,7 @@ __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 		fread(&Map, sizeof(int)*6, 1, pFile);
 
 		// Allocating and reading data
-		Map.pBlockArray = (unsigned char*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ());
+		Map.pBlockArray = (unsigned short*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ());
 		fread(Map.pBlockArray, Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ(), 1, pFile);
 
 		fclose(pFile);
