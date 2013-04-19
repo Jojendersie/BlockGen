@@ -16,6 +16,26 @@ OrE::Algorithm::PerlinNoise PerlinObject2D(0, 10000000.0f);
 OrE::Algorithm::PerlinNoise PerlinObject3D(1, 10000000.0f);
 
 // **************************************************************************** //
+
+/* GenerateDynamics() *************************************
+ * generates water and vegetation
+ * generates the needed surface if it doesnt exists
+ * grass 501
+ * tree [511; 520]
+ */
+int GenerateDynamics(int x, int y)
+{
+	static float TreeRate = 0.9f; 
+		if(OrE::Algorithm::Rand() < TreeRate)
+		{
+			TreeRate = 0.f;
+			return int(OrE::Algorithm::Rand() * 9 + 1) + 500;
+		}
+	TreeRate += 0.1f;
+	return 501;
+	return 0;
+}
+
 int GenerateBlock(int x, int y, int z) // generates the structures, no dynamic objects
 {
 	float fx = x * SURFACE_FREQ;
@@ -70,7 +90,8 @@ int GenerateBlock(int x, int y, int z) // generates the structures, no dynamic o
 	// If standart is the main landscape control the block type
 	if((f2>f1) && (f2>f3))
 	{
-		if(fSurfaceClip-fzr <= 0.25f) iPriorBlockType = 3;
+		if(fSurfaceClip-fzr <= 0.25f) iPriorBlockType = 3;//0.25
+	//	if((f2 > 0.7f) )iPriorBlockType = 5;
 	}
 
 	// --------------- 3D Bubbles ------------------
@@ -84,31 +105,17 @@ int GenerateBlock(int x, int y, int z) // generates the structures, no dynamic o
 	{
 		iPriorBlockType = 4;
 	}
-
+	// -------------- vegetation --------------------
+	/*if((f1*fDesert + f2*fStandard + f3*fBubble) <= 0.0f) //Loc is free
+	{
+		//surface consists of dirt
+		iPriorBlockType = GenerateDynamics(x,y,z);
+		return iPriorBlockType;
+	}
+	return 0;*/
 	return ((f1*fDesert + f2*fStandard + f3*fBubble) > 0.0f)?iPriorBlockType:0;
 }
 
-/* GenerateDynamics() *************************************
- * generates water and vegetation
- * call this after the surface exists
- * grass 501
- * tree [511; 520]
- */
-int GenerateDynamics(int x, int y, int z)
-{
-	static float TreeRate = 0.9f; 
-	if(Map.Get(x,y,z - 1) == 3) //dirt as ground
-	{
-		if(OrE::Algorithm::Rand() < TreeRate)
-		{
-			TreeRate = 0.f;
-			return -(int(OrE::Algorithm::Rand() * 9 + 1)) - 10;
-		}
-	TreeRate += 0.1f;
-	return -1;//-1
-	}
-	return 0;
-}
 
 // **************************************************************************** //
 // Enlargen the map array
@@ -121,7 +128,7 @@ void Extend(int _bx, int _by, int _bz)
 	int iNewMaxY = (_by>0?20:0)+Map.iMaxY;		int iSY = iNewMaxY-iNewMinY;
 	int iNewMinZ = (_bz<0?-20:0)+Map.iMinZ;
 	int iNewMaxZ = (_bz>0?20:0)+Map.iMaxZ;		int iSZ = iNewMaxZ-iNewMinZ;
-	unsigned short* pNewBlockArray = (unsigned short*)malloc(iSX*iSY*iSZ);
+	unsigned short* pNewBlockArray = (unsigned short*)malloc(iSX*iSY*iSZ*2);//2byte per block
 	for(int x=iNewMinX; x<iNewMaxX; ++x)
 		for(int y=iNewMinY; y<iNewMaxY; ++y)
 			for(int z=iNewMinZ; z<iNewMaxZ; ++z)
@@ -135,6 +142,15 @@ void Extend(int _bx, int _by, int _bz)
 				else
 					pNewBlockArray[((x-iNewMinX)*iSY+y-iNewMinY)*iSZ + z-iNewMinZ] = GenerateBlock(x,y,z);
 			}
+	for(int x=iNewMinX; x<iNewMaxX; ++x)
+		for(int y=iNewMinY; y<iNewMaxY; ++y)
+			for(int z=iNewMaxZ; z>iNewMinZ; --z) // go from top to bot, so the first hit is on the surface
+				if(pNewBlockArray[((x-iNewMinX)*iSY+y-iNewMinY)*iSZ + z-iNewMinZ] == 3)
+				{
+					pNewBlockArray[((x-iNewMinX)*iSY+y-iNewMinY)*iSZ + (z+1)-iNewMinZ] = TestMode?5:GenerateDynamics(x,y);
+					break;
+				}
+			
 	// Copy new data into map
 	free(Map.pBlockArray);
 	Map.pBlockArray = pNewBlockArray;
@@ -181,12 +197,12 @@ __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ)
 		|| y == Map.iMinY || y == Map.iMaxY-1
 		|| z == Map.iMinZ || z == Map.iMaxZ-1)
 		return true;*/
-	if(IsSolid(x,y+1,z)) return true;
-	if(IsSolid(x,y-1,z)) return true;
-	if(IsSolid(x,y,z+1)) return true;
-	if(IsSolid(x,y,z-1)) return true;
-	if(IsSolid(x+1,y,z)) return true;
-	if(IsSolid(x-1,y,z)) return true;
+	if(!IsSolid(x,y+1,z)) return true;
+	if(!IsSolid(x,y-1,z)) return true;
+	if(!IsSolid(x,y,z+1)) return true;
+	if(!IsSolid(x,y,z-1)) return true;
+	if(!IsSolid(x+1,y,z)) return true;
+	if(!IsSolid(x-1,y,z)) return true;
 	return false;
 }
 
@@ -224,7 +240,7 @@ __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 		Map.iMinX = -20;	Map.iMaxX = 20;
 		Map.iMinY = -20;	Map.iMaxY = 20;
 		Map.iMinZ = -20;	Map.iMaxZ = 20;
-		Map.pBlockArray = (unsigned short*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ());
+		Map.pBlockArray = (unsigned short*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ()*2);//short 2 byte
 
 		// Seed random to file name
 		uint32 dwSeed = 0;
@@ -265,16 +281,18 @@ __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 // Fills the given area with perlin noise. Not doing any test for boundaries!
 void Fill(int x1, int x2, int y1, int y2, int z1, int z2)
 {
-	static bool bPreviousZ = false;
 	for(int x=x1;x<x2;++x)
 		for(int y=y1;y<y2;++y)
 			for(int z=z1;z<z2;++z)
-			{
 				Map.Set(x,y,z, GenerateBlock(x,y,z));
-				if(bPreviousZ && !Map.Get(x,y,z))
-					Map.Set(x,y,z, GenerateDynamics(x,y,z));
-				bPreviousZ = Map.Get(x,y,z) > 1;
-			}
+	for(int x=x1;x<x2;++x)
+		for(int y=y1;y<y2;++y)
+			for(int z=z2;z>z1;--z)
+				if(Map.Get(x,y,z)==3)
+				{
+					Map.Set(x,y,z+1, TestMode?5:GenerateDynamics(x,y));
+					break;
+				}
 }
 
 // **************************************************************************** //

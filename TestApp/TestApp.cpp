@@ -6,7 +6,9 @@
 #include "stdafx.h"
 #include "..\Generator.h"
 
+
 char* g_acASCIIArtTable = "  .-~=oO#@@@@@@@@@";
+
 
 
 int _tmain(int argc, _TCHAR* argv[])
@@ -16,9 +18,11 @@ int _tmain(int argc, _TCHAR* argv[])
 	// Schnitt
 	for(int z=19;z>=-20;--z)
 	{
+		
 		for(int y=-20;y<59;++y)
 			if(IsSurfaceBlock(0.0f, (float)y, (float)z))
-			std::cout << GetBlock(0.0f, (float)y, (float)z);
+				std::cout << GetBlock(0.0f, (float)y, (float)z);
+			else std::cout << " ";
 		std::cout << '\n';
 	}
 

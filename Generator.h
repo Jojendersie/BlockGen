@@ -60,3 +60,5 @@ const float SURFACE_FREQ = 0.05f;
 const float VOLUME_FREQ = 0.15f;
 const float SURFACE_VERTICAL_BLOCK_NUMBER = 10.0f;
 const float SURFACE_VERTICAL_BLOCK_OFFSET = 10.0f;
+
+const bool TestMode = 0;
