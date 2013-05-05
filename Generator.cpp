@@ -28,12 +28,11 @@ int GenerateDynamics(int x, int y)
 	static float TreeRate = 0.9f; 
 		if(OrE::Algorithm::Rand() < TreeRate)
 		{
-			TreeRate = 0.f;
-			return int(OrE::Algorithm::Rand() * 9 + 1) + 500;
+			TreeRate = 0.0f;
+			return clamp(int(OrE::Algorithm::Rand() * 20 + 1) + 500, 501, 511); // more likely older trees
 		}
 	TreeRate += 0.1f;
 	return 501;
-	return 0;
 }
 
 int GenerateBlock(int x, int y, int z) // generates the structures, no dynamic objects
@@ -105,14 +104,6 @@ int GenerateBlock(int x, int y, int z) // generates the structures, no dynamic o
 	{
 		iPriorBlockType = 4;
 	}
-	// -------------- vegetation --------------------
-	/*if((f1*fDesert + f2*fStandard + f3*fBubble) <= 0.0f) //Loc is free
-	{
-		//surface consists of dirt
-		iPriorBlockType = GenerateDynamics(x,y,z);
-		return iPriorBlockType;
-	}
-	return 0;*/
 	return ((f1*fDesert + f2*fStandard + f3*fBubble) > 0.0f)?iPriorBlockType:0;
 }
 
@@ -189,7 +180,7 @@ __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ)
 	int x = (int)_fX;
 	int y = (int)_fY;
 	int z = (int)_fZ;
-	if(!Map.Get(x,y,z)) return false;
+	//if(!Map.Get(x,y,z)) return false;
 	// Check neigborhood for given block
 	// If neighbor outside of the map -> Surface Block
 	// If neighbor is empty block -> Surface Block
@@ -197,12 +188,12 @@ __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ)
 		|| y == Map.iMinY || y == Map.iMaxY-1
 		|| z == Map.iMinZ || z == Map.iMaxZ-1)
 		return true;*/
-	if(!IsSolid(x,y+1,z)) return true;
-	if(!IsSolid(x,y-1,z)) return true;
-	if(!IsSolid(x,y,z+1)) return true;
-	if(!IsSolid(x,y,z-1)) return true;
-	if(!IsSolid(x+1,y,z)) return true;
-	if(!IsSolid(x-1,y,z)) return true;
+	if((y!=Map.iMaxY-1) && !IsSolid(x,y+1,z)) return true;
+	if((y!=Map.iMinY) && !IsSolid(x,y-1,z)) return true;
+	if((z!=Map.iMaxZ-1) && !IsSolid(x,y,z+1)) return true;
+	if((z!=Map.iMinZ) &&!IsSolid(x,y,z-1)) return true;
+	if((x!=Map.iMaxX-1) &&!IsSolid(x+1,y,z)) return true;
+	if((x!=Map.iMinX) && !IsSolid(x-1,y,z)) return true;
 	return false;
 }
 
@@ -269,8 +260,8 @@ __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 		fread(&Map, sizeof(int)*6, 1, pFile);
 
 		// Allocating and reading data
-		Map.pBlockArray = (unsigned short*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ());
-		fread(Map.pBlockArray, Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ(), 1, pFile);
+		Map.pBlockArray = (unsigned short*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ()*2);//2byte per short
+		fread(Map.pBlockArray, Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ()*2, 1, pFile);
 
 		fclose(pFile);
 		return true;

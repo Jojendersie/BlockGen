@@ -70,6 +70,7 @@
     <ClInclude Include="OrTypeDef.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="artificiallyStructures.cpp" />
     <ClCompile Include="BlockGen.cpp" />
     <ClCompile Include="Generator.cpp" />
     <ClCompile Include="OrRandom.cpp" />

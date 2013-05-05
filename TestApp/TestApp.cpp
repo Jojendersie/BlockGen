@@ -13,16 +13,16 @@ char* g_acASCIIArtTable = "  .-~=oO#@@@@@@@@@";
 
 int _tmain(int argc, _TCHAR* argv[])
 {
-	LoadBlockMap(L"dirt03");
+	LoadBlockMap(L"test03");//dirt03
 
 	// Schnitt
 	for(int z=19;z>=-20;--z)
 	{
 		
 		for(int y=-20;y<59;++y)
-			if(IsSurfaceBlock(0.0f, (float)y, (float)z))
+		//	if(IsSurfaceBlock(0.0f, (float)y, (float)z))
 				std::cout << GetBlock(0.0f, (float)y, (float)z);
-			else std::cout << " ";
+		//	else std::cout << " ";
 		std::cout << '\n';
 	}
 

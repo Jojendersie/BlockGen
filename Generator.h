@@ -45,6 +45,8 @@ extern "C" __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float
 extern "C" __declspec(dllexport) bool IsSolid(int x, int y, int z);
 extern "C" __declspec(dllexport) void DestroyBlock(float _fX, float _fY, float _fZ);				// Removes an created block due to set 0
 extern "C" __declspec(dllexport) void SetBlock(float _fX, float _fY, float _fZ, int _iType);		// set to a hopefully specified block (each integer possible)
+
+extern "C" __declspec(dllexport) void House(int x0,int y0,int z0, int x1,int y1,int etages = 1,int windows = 0);
 // Load a map a generate a new one if file does not exists
 // Returns false if new generated and true if loaded from file
 extern "C" __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName);
