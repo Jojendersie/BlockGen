@@ -9,16 +9,55 @@
 
 #include "OrTypeDef.h"
 #include "OrRandom.h"
+#include <sstream>
 
 // Objects of all kinds
+
+//params for SMap
+const int MaxChunks = 1024; // 8*8*8*1024*2 = 1.048.576b 1mb
+const  unsigned int ChunkLength = 8;
+
+struct chunk {
+	int x0, y0, z0;
+	unsigned short block[ChunkLength*ChunkLength*ChunkLength];
+};
 struct SMap {
-	int iMinX, iMinY, iMaxX, iMaxY, iMinZ, iMaxZ;	// Bounding box
-	unsigned  short* pBlockArray;						// 3D Array with z fast direction
-	int GetSizeX()	{return iMaxX-iMinX;}
-	int GetSizeY()	{return iMaxY-iMinY;}
-	int GetSizeZ()	{return iMaxZ-iMinZ;}
-	void Set(int x, int y, int z, int _iVal)	{pBlockArray[((x-iMinX)*GetSizeY()+y-iMinY)*GetSizeZ() + z-iMinZ] = _iVal;}
-	int Get(int x, int y, int z)				{return pBlockArray[((x-iMinX)*GetSizeY()+y-iMinY)*GetSizeZ() + z-iMinZ];}
+	chunk* pChunkArray[MaxChunks];				//[0] points on the last access one 
+	wchar_t* Dir;
+	int IndexHigh; //highest entry
+	void Ini()
+	{
+		for(int i = 0; i < MaxChunks; i++)
+			pChunkArray[i] = NULL;
+	}
+	void Set(int x, int y, int z, int _iVal)
+	{
+		bool bVoidEntry = false;
+		//get chunk origin
+		int ModX = x % ChunkLength; 
+		int ModY = y % ChunkLength;
+		int ModZ = z % ChunkLength;
+		for(int i = 0; i < IndexHigh; i++)
+			if(pChunkArray[i] != NULL && pChunkArray[i]->x0==x-ModX && pChunkArray[i]->y0==y-ModY && pChunkArray[i]->z0==z-ModZ)
+			{
+				pChunkArray[i]->block[abs(ModZ) + abs(ModX)*ChunkLength + abs(ModY)*ChunkLength*ChunkLength] = _iVal;
+				if(pChunkArray[0] != pChunkArray[i]) pChunkArray[0] = pChunkArray[i]; //save last access
+				return;
+			}
+	}
+	int Get(int x, int y, int z)				
+	{
+		//get chunk origin
+		int ModX = x % ChunkLength; 
+		int ModY = y % ChunkLength;
+		int ModZ = z % ChunkLength;
+		for(int i = 0; i <= IndexHigh; i++)
+			if(pChunkArray[i] != NULL && pChunkArray[i]->x0==x-ModX && pChunkArray[i]->y0==y-ModY && pChunkArray[i]->z0==z-ModZ)
+			{
+				return pChunkArray[i]->block[abs(ModZ) + abs(ModX) * ChunkLength+abs(ModY)*ChunkLength *ChunkLength];
+			}
+		return 65535; //not defined
+	}
 };
 extern SMap Map;
 extern OrE::Algorithm::PerlinNoise PerlinObject2D;
@@ -49,6 +88,7 @@ extern "C" __declspec(dllexport) void SetBlock(float _fX, float _fY, float _fZ, 
 extern "C" __declspec(dllexport) void House(int x0,int y0,int z0, int x1,int y1,int etages = 1,int windows = 0);
 // Load a map a generate a new one if file does not exists
 // Returns false if new generated and true if loaded from file
+//@param _pcFileName - Name without endings or path
 extern "C" __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName);
 // Save the current map to the file. The file is generated if not existing
 // Returns false if file could not be opened

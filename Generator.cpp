@@ -4,18 +4,89 @@
 #include <cstdio>
 #include <cmath>
 #include <cstring>
+#include <windows.h>
 
 // **************************************************************************** //
 // Predeclarations
 void Fill(int x1, int x2, int y1, int y2, int z1, int z2);					// Fills the given area with perlin noise. Not doing any test for boundaries!
 void Extend(int _bx, int _by, int _bz);										// Enlarges the map array
-
+// **************************************************************************** //
+const wchar_t* FileEnding = L".chunk";
+std::wstringstream wss;
+std::wstringstream wssChunk; //only for chunk pos
+wchar_t* sss; //stringstreamString
+wchar_t* sssChunk;
 // **************************************************************************** //
 SMap Map;
 OrE::Algorithm::PerlinNoise PerlinObject2D(0, 10000000.0f);
 OrE::Algorithm::PerlinNoise PerlinObject3D(1, 10000000.0f);
+/* ConcatpwChar *****************************
+ *	result is only valid til the next call
+ * use sss/ sssChunk as result after the call
+ */
+const wchar_t* ConcatpwChar(const wchar_t* pwChar1, const wchar_t* pwChar2, const wchar_t* pwChar3)
+{
+	wss.str(L"");
+	wss.clear();
+	wss << pwChar1 << pwChar2 << pwChar3;
+	free(sss);
+	sss = (wchar_t*) malloc(wss.str().length()*2+2);
+	wcscpy(sss, wss.str().c_str());
+	return wss.str().c_str();
+}
+const wchar_t* ConcatpwChar(const wchar_t* pwChar1, const wchar_t* pwChar2)
+{
+	wss.str(L"");
+	wss.clear();
+	wss << pwChar1 << pwChar2;
+	return wss.str().c_str();
+}
 
-// **************************************************************************** //
+const wchar_t* LocToWChar(int x, int y, int z) 
+{
+	wssChunk.str(L"");
+	wssChunk.clear();
+	wssChunk << x << L"_" <<  y << L"_" << z;
+	free(sssChunk);
+	sssChunk = (wchar_t*) malloc(wssChunk.str().length()*2+2);
+	wcscpy(sssChunk, wssChunk.str().c_str());
+	return wssChunk.str().c_str();
+}
+
+int findVoidEntry()
+{
+	for(int i = 1; i <= Map.IndexHigh; i++)
+		if(Map.pChunkArray[i] == NULL)	
+			return i;
+	Map.IndexHigh++;
+	return Map.IndexHigh;
+}
+
+void SaveChunk(chunk* ToSave)
+{ 
+	FILE* pFile = _wfopen(ConcatpwChar(Map.Dir,LocToWChar(ToSave->x0,ToSave->y0,ToSave->z0), FileEnding), L"wb");
+	if(!pFile) return;
+	fwrite(&(ToSave->block), sizeof(unsigned short)*ChunkLength*ChunkLength*ChunkLength, 1, pFile);
+	fclose(pFile);
+}
+chunk* loadChunk(int x, int y, int z)
+{
+	LocToWChar(x,y,z); //create name written in sssChunk
+	ConcatpwChar(Map.Dir, sssChunk,FileEnding); //create complete path in sss
+	FILE* pFile = _wfopen(sss, L"rb");
+	if(!pFile) return NULL;
+	chunk* newChunk = new chunk;
+	fread(&(newChunk->block), sizeof(unsigned short)*ChunkLength*ChunkLength*ChunkLength, 1, pFile);
+	newChunk->x0 = x;
+	newChunk->y0 = y;
+	newChunk->z0 = z;
+	fclose(pFile);
+	Map.pChunkArray[findVoidEntry()] = newChunk;
+	return newChunk;
+}
+
+
+
 
 /* GenerateDynamics() *************************************
  * generates water and vegetation
@@ -25,6 +96,7 @@ OrE::Algorithm::PerlinNoise PerlinObject3D(1, 10000000.0f);
  */
 int GenerateDynamics(int x, int y)
 {
+	return 5;
 	static float TreeRate = 0.9f; 
 		if(OrE::Algorithm::Rand() < TreeRate)
 		{
@@ -107,13 +179,42 @@ int GenerateBlock(int x, int y, int z) // generates the structures, no dynamic o
 	return ((f1*fDesert + f2*fStandard + f3*fBubble) > 0.0f)?iPriorBlockType:0;
 }
 
+/* creates and filles and chunk spezified with its origin
+ * adds the chunk to the map
+ */
+chunk* createChunk(int x, int y, int z)
+{
+	int Index;
+	int i = findVoidEntry();
+	Map.pChunkArray[i] = new chunk;
+	Map.pChunkArray[i]->x0 = x;
+	Map.pChunkArray[i]->y0 = y;
+	Map.pChunkArray[i]->z0 = z;
+	for(int ix = 0; ix < ChunkLength; ix++)
+		for(int iy = 0; iy < ChunkLength; iy++)
+			for(int iz = 0; iz < ChunkLength; iz++)
+				Map.pChunkArray[i]->block[abs(iz) + abs(ix)*ChunkLength + abs(iy)*ChunkLength*ChunkLength]=GenerateBlock(x+ix,y+iy,z+iz); 
+	for(int ix = 0; ix < ChunkLength; ix++)
+		for(int iy = 0; iy < ChunkLength; iy++)
+			for(int iz = 0; iz < ChunkLength; iz++)
+			{
+				Index = abs(iz) + abs(ix)*ChunkLength + abs(iy)*ChunkLength*ChunkLength;
+				if(!Map.pChunkArray[i]->block[Index] && GetBlock(ix,iy,iz-1)==3)//Map.pChunkArray[i]->block[Index-1])
+				{
+					Map.pChunkArray[i]->block[Index]=GenerateDynamics(x+ix,y+iy);
+					break;
+				}
+			}
+	return Map.pChunkArray[i];
+}
+
 
 // **************************************************************************** //
 // Enlargen the map array
 void Extend(int _bx, int _by, int _bz)
 {
 	// Give +20 blocks on one ore more (max 3) sides
-	int iNewMinX = (_bx<0?-20:0)+Map.iMinX;
+/*	int iNewMinX = (_bx<0?-20:0)+Map.iMinX;
 	int iNewMaxX = (_bx>0?20:0)+Map.iMaxX;		int iSX = iNewMaxX-iNewMinX;
 	int iNewMinY = (_by<0?-20:0)+Map.iMinY;
 	int iNewMaxY = (_by>0?20:0)+Map.iMaxY;		int iSY = iNewMaxY-iNewMinY;
@@ -133,12 +234,14 @@ void Extend(int _bx, int _by, int _bz)
 				else
 					pNewBlockArray[((x-iNewMinX)*iSY+y-iNewMinY)*iSZ + z-iNewMinZ] = GenerateBlock(x,y,z);
 			}
+	bool bHouse = false;
 	for(int x=iNewMinX; x<iNewMaxX; ++x)
 		for(int y=iNewMinY; y<iNewMaxY; ++y)
 			for(int z=iNewMaxZ; z>iNewMinZ; --z) // go from top to bot, so the first hit is on the surface
 				if(pNewBlockArray[((x-iNewMinX)*iSY+y-iNewMinY)*iSZ + z-iNewMinZ] == 3)
 				{
 					pNewBlockArray[((x-iNewMinX)*iSY+y-iNewMinY)*iSZ + (z+1)-iNewMinZ] = TestMode?5:GenerateDynamics(x,y);
+					if(!bHouse){ House(x,y,z,x+7,y+5); bHouse=true;}
 					break;
 				}
 			
@@ -147,7 +250,7 @@ void Extend(int _bx, int _by, int _bz)
 	Map.pBlockArray = pNewBlockArray;
 	Map.iMinX = iNewMinX;	Map.iMaxX = iNewMaxX;
 	Map.iMinY = iNewMinY;	Map.iMaxY = iNewMaxY;
-	Map.iMinZ = iNewMinZ;	Map.iMaxZ = iNewMaxZ;
+	Map.iMinZ = iNewMinZ;	Map.iMaxZ = iNewMaxZ;*/
 }
 
 // **************************************************************************** //
@@ -156,12 +259,14 @@ __declspec(dllexport) int GetBlock(float _fX, float _fY, float _fZ)
 	int x = (int)_fX;
 	int y = (int)_fY;
 	int z = (int)_fZ;
-	// extend map if necessary
-	int iExX = x<Map.iMinX ? -1 : (x>=Map.iMaxX ? 1 : 0);
-	int iExY = y<Map.iMinY ? -1 : (y>=Map.iMaxY ? 1 : 0);
-	int iExZ = z<Map.iMinZ ? -1 : (z>=Map.iMaxZ ? 1 : 0);
-	if(iExX || iExY || iExZ) Extend(iExX,iExY,iExZ);
-	return Map.Get(x,y,z);
+	uint16 Type = Map.Get(x,y,z); 
+	if(Type == 65535)//not in RAM
+	{
+		if(!loadChunk(x-(x%ChunkLength), y-(y%ChunkLength), z-(z%ChunkLength)))//generate
+			createChunk(x-(x%ChunkLength), y-(y%ChunkLength), z-(z%ChunkLength));
+		Type  = Map.Get(x,y,z);
+	}
+	return Type;
 }
 
 // **************************************************************************** //
@@ -188,12 +293,12 @@ __declspec(dllexport) bool IsSurfaceBlock(float _fX, float _fY, float _fZ)
 		|| y == Map.iMinY || y == Map.iMaxY-1
 		|| z == Map.iMinZ || z == Map.iMaxZ-1)
 		return true;*/
-	if((y!=Map.iMaxY-1) && !IsSolid(x,y+1,z)) return true;
-	if((y!=Map.iMinY) && !IsSolid(x,y-1,z)) return true;
-	if((z!=Map.iMaxZ-1) && !IsSolid(x,y,z+1)) return true;
-	if((z!=Map.iMinZ) &&!IsSolid(x,y,z-1)) return true;
-	if((x!=Map.iMaxX-1) &&!IsSolid(x+1,y,z)) return true;
-	if((x!=Map.iMinX) && !IsSolid(x-1,y,z)) return true;
+	if(!IsSolid(x,y+1,z)) return true;
+	if(!IsSolid(x,y-1,z)) return true;
+	if(!IsSolid(x,y,z+1)) return true;
+	if(!IsSolid(x,y,z-1)) return true;
+	if(!IsSolid(x+1,y,z)) return true;
+	if(!IsSolid(x-1,y,z)) return true;
 	return false;
 }
 
@@ -222,17 +327,22 @@ __declspec(dllexport) void SetBlock(float _fX, float _fY, float _fZ, int _iType)
 // Load a map a generate a new one if file does not exists
 __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 {
+	ConcatpwChar(_pcFileName, L"\\");
+	Map.Dir = (wchar_t*) malloc(wss.str().length()+1);
+	wcscpy(Map.Dir, wss.str().c_str());
+	CreateDirectoryW(_pcFileName, NULL);
+	Map.IndexHigh = 0;
+	Map.Ini();//inizialise, pointers get NULLed
+	if(!loadChunk(0,0,0)) //ini map with 1 chunk loaded so that pChunkArray[0] is spezified
+		createChunk( 0, 0, 0);
+	Map.pChunkArray[0] = Map.pChunkArray[1]; 
+
 	// Errors are not supported!
 	// Try open
-	FILE* pFile = _wfopen(_pcFileName, L"rb");
+	ConcatpwChar(Map.Dir,_pcFileName, L".map");
+	FILE* pFile = _wfopen(sss, L"rb");
 	if(!pFile)
 	{
-		// Case file does not exists (create a minimal block).
-		Map.iMinX = -20;	Map.iMaxX = 20;
-		Map.iMinY = -20;	Map.iMaxY = 20;
-		Map.iMinZ = -20;	Map.iMaxZ = 20;
-		Map.pBlockArray = (unsigned short*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ()*2);//short 2 byte
-
 		// Seed random to file name
 		uint32 dwSeed = 0;
 		while(*_pcFileName)
@@ -245,7 +355,6 @@ __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 		PerlinObject2D.SetSeed(dwSeed);
 		PerlinObject3D.SetSeed(dwSeed*1009 + 71);
 
-		Fill(-20,20,-20,20,-20,20);
 		return false;
 	} else {
 		// Read and check for version...
@@ -255,13 +364,6 @@ __declspec(dllexport) bool LoadBlockMap(wchar_t* _pcFileName)
 
 		PerlinObject2D.SetSeed(FH.uiSeed2D);
 		PerlinObject3D.SetSeed(FH.uiSeed3D);
-
-		// Reading bounding box
-		fread(&Map, sizeof(int)*6, 1, pFile);
-
-		// Allocating and reading data
-		Map.pBlockArray = (unsigned short*)malloc(Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ()*2);//2byte per short
-		fread(Map.pBlockArray, Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ()*2, 1, pFile);
 
 		fclose(pFile);
 		return true;
@@ -294,7 +396,7 @@ __declspec(dllexport) bool SaveBlockMap(wchar_t* _pcFileName)
 	fwrite(_pcFileName, sizeof(wchar_t)*wcslen(_pcFileName), 1, pFile2);
 	fclose(pFile2);*/
 	// Open and create, errors are not supported!
-	FILE* pFile = _wfopen(_pcFileName, L"wb");
+	FILE* pFile = _wfopen(ConcatpwChar(Map.Dir,_pcFileName, FileEnding), L"wb");
 	if(!pFile) return false;
 
 	FileHeader FH;
@@ -302,12 +404,6 @@ __declspec(dllexport) bool SaveBlockMap(wchar_t* _pcFileName)
 	FH.uiSeed2D = PerlinObject2D.GetSeed();
 	FH.uiSeed3D = PerlinObject3D.GetSeed();
 	fwrite(&FH, sizeof(FileHeader), 1, pFile);
-
-	// Writing bounding box
-	fwrite(&Map, sizeof(int)*6, 1, pFile);
-
-	// Writing data
-	fwrite(Map.pBlockArray, Map.GetSizeX()*Map.GetSizeY()*Map.GetSizeZ(), 1, pFile);
 
 	fclose(pFile);
 	return true;
